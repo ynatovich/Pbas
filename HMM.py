@@ -18,7 +18,7 @@ I = 0
 
 
 class HMMState:
-    def __init__(self, emission_probabilities, type=None, transition_probabilities=[0, 0, 0, 0]):
+    def __init__(self, emission_probabilities, type=None, transition_probabilities=[-np.inf, -np.inf, -np.inf, -np.inf]):
         """
         :param emission_probabilities: A dictionary of the form
         {l: e(l)} for each l=possible emitted letter and e(l) the
@@ -37,15 +37,7 @@ class HMMState:
 class HMM_Model:
     def __init__(self, states):
         self.states = states
-        self.start_state = self.states[0]
-        self.transition_table = None
-        self.log_transition_table = None
-
-    def set_transition_table(self, table):
-        self.log_transition_table = np.log(table)
-
-    def update_log_transition_table(self, i, j, value):
-        self.log_transition_table[i, j] = value
+        self.start_state = self.states[0, 0]
 
 # -------------------- Helper methods --------------------
 
@@ -99,9 +91,9 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
             d_to_m = np.log((np.sum(~con1&con2&con3)+1)/(motif_matrix.shape[0]+1))
             d_to_i = np.log((np.sum(~con1&con2)+1)/(motif_matrix.shape[0]+1))
         else:  # we got to the last position in the motif
-            states[i, 0].update_log_transition(3, np.logaddexp(np.log(1), - m_to_i))
-            states[i, 1].update_log_transition(3, np.logaddexp(np.log(1), - i_to_i))
-            states[i, 2].update_log_transition(3, np.logaddexp(np.log(1), - d_to_i))
+            states[i, 0].update_log_transition(3, np.log(1 - np.exp(m_to_i)))
+            states[i, 1].update_log_transition(3, np.log(1 - np.exp(i_to_i)))
+            states[i, 2].update_log_transition(3, np.log(1 - np.exp(d_to_i)))
         states[i, 0].update_log_transition(0, m_to_m)
         states[i, 0].update_log_transition(1, m_to_i)
         states[i, 0].update_log_transition(2, m_to_d)
@@ -111,8 +103,6 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
         states[i, 2].update_log_transition(0, d_to_m)
         states[i, 2].update_log_transition(1, d_to_i)
         states[i, 2].update_log_transition(2, d_to_d)
-    # num =
-
 
 def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
     """
@@ -127,21 +117,8 @@ def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
     motif_s = motif_s > len(motif_matrix) / 2
     motif_i = np.where(motif_s == 1)
     states = build_states(motif_matrix, motif_s, motif_i, log_bg_e)
-    transitions = build_transition(motif_matrix, motif_s, motif_i,log_bg_t, states)
-
-
-    # emission_table
-    # motif_states = [HMMState(emission_probabilities=emissions) for emissions in emission_table]
-    # model = HMM_Model(states=[B] + motif_states)
-    # transition_table = np.zeros(shape=(len(motif_states) + 1, len(motif_states) + 1))
-    # transition_table[0, 0] = 1 - p
-    # transition_table[0, 1] = p
-    # for i in range(1, len(model.states) - 1):
-    #     transition_table[i, i + 1] = 1
-    # transition_table[-1, 0] = 1
-    # model.set_transition_table(transition_table)
-    # return model
-
+    build_transition(motif_matrix, motif_s, motif_i,log_bg_t, states)
+    return HMM_Model(states)
 
 # -------------------- Main --------------------
 
@@ -159,4 +136,4 @@ def main():
 if __name__ == '__main__':
     # main()
     x = np.log(0.4)
-    print(np.logaddexp(np.log(1), -x))
+    print(np.exp(np.log(1-np.exp(x))))
