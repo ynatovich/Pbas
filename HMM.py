@@ -157,4 +157,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    x = np.log(0.4)
+    print(np.logaddexp(np.log(1), -x))
