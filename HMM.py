@@ -24,9 +24,9 @@ class HMMState:
         {l: e(l)} for each l=possible emitted letter and e(l) the
         emission probability in log
         """
-        self.log_emission_probabilities = emission_probabilities
-        self.log_transition_probabilities = transition_probabilities
-        self.type = type
+        self.log_emission_probabilities = emission_probabilities  # dict of AA probability
+        self.log_transition_probabilities = transition_probabilities  # array size 4 - [M, I, D, B]
+        self.type = type  # B/M/I/D
 
     def update_log_emissions(self, letter, new_log_prob):
         self.log_emission_probabilities[letter] = new_log_prob
@@ -104,6 +104,7 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
         states[i, 2].update_log_transition(1, d_to_i)
         states[i, 2].update_log_transition(2, d_to_d)
 
+
 def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
     """
     Initialize a new HMMModel object in accordance with the
@@ -134,6 +135,4 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-    x = np.log(0.4)
-    print(np.exp(np.log(1-np.exp(x))))
+    main()
