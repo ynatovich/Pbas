@@ -69,7 +69,7 @@ class Reader:
             fas_d.append(seq)
         return fas_d
 
-    def get_bg_emission(self):
+    def get_bg_e(self):
         return self.background_e
 
 r= Reader("PF00096", save_file=True, alnType='seed')
