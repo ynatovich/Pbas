@@ -9,7 +9,7 @@ import gzip
 import os
 import mechanicalsoup
 from itertools import groupby
-
+import numpy as np
 
 class Reader:
 
@@ -37,10 +37,10 @@ class Reader:
             with gzip.open("%s.gz"%self.fasta_name, 'rb') as f, open(self.fasta_name,'wb') as g:
                 g.write(f.read())
             os.remove("%s.gz"%self.fasta_name)
-        self.fasta = self.fasta_read()
+        fast = self.fasta_read()
+        self.fasta = np.array(list(map(list, fast)))
         if not save_file:
             os.remove(self.fasta_name)
-
 
     def get_fasta(self):
         return self.fasta
@@ -55,9 +55,9 @@ class Reader:
             fasta_name = self.fasta_name
         f = open(fasta_name)
         faiter = (x[1] for x in groupby(f, lambda line: line.startswith(">")))
-        fas_d = {}
+        fas_d = []
         for header in faiter:
             header = next(header)[1:].strip()
             seq = "".join(s.strip() for s in next(faiter))
-            fas_d[header] = seq
+            fas_d.append(seq)
         return fas_d
