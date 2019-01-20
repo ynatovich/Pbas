@@ -18,18 +18,21 @@ I = 0
 
 
 class HMMState:
-    def __init__(self, emission_probabilities, type=None):
+    def __init__(self, emission_probabilities, type=None, transition_probabilities=[0, 0, 0, 0]):
         """
         :param emission_probabilities: A dictionary of the form
         {l: e(l)} for each l=possible emitted letter and e(l) the
         emission probability in log
         """
         self.log_emission_probabilities = emission_probabilities
+        self.log_transition_probabilities = transition_probabilities
         self.type = type
 
     def update_log_emissions(self, letter, new_log_prob):
         self.log_emission_probabilities[letter] = new_log_prob
 
+    def update_log_transition(self, other, new_log_prob):
+        self.log_transition_probabilities[other] = new_log_prob
 
 class HMM_Model:
     def __init__(self, states):
@@ -70,9 +73,9 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
     num_states = (len(states) - 2) * 3 + 2
     motif_gap_or_nuc = motif_matrix != GAP  # matrix with size like motif_mat represent if there is nuc or gap
     trans_mat = np.zeros((num_states, num_states), dtype=np.float64)
-    trans_mat[0, 0] = log_bg_t
-    trans_mat[0, 1] = 1 - log_bg_t * sum(motif_matrix[:, 0] == GAP)
-    trans_mat[0, 3] = log_bg_t * sum(motif_matrix[:, 0] != GAP)
+    states[0, 0].update_log_transition(3, log_bg_t)
+    states[0, 0].update_log_transition(0, log_bg_t * sum(motif_matrix[:, 0] != GAP))
+    states[0, 0].update_log_transition(2, 1 - log_bg_t * sum(motif_matrix[:, 0] == GAP))
     s = motif_s.find(motif_s == 1)
     trans_mat[0, 1] = np.sum(motif_s[:, s], axis=1)
     for i in range(len(motif_i)):
@@ -94,15 +97,15 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
         d_to_d = np.log((np.sum(~con1&con2&~con3)+1)/(motif_matrix.shape[0]+1))
         d_to_m = np.log((np.sum(~con1&con2&con3)+1)/(motif_matrix.shape[0]+1))
         d_to_i = np.log((np.sum(~con1&con2)+1)/(motif_matrix.shape[0]+1))
-        trans_mat[i, i] = m_to_m
-        trans_mat[i, i+1] = m_to_i
-        trans_mat[i, i+2] = m_to_d
-        trans_mat[i+1, i] = i_to_m
-        trans_mat[i+1, i+1] = i_to_i
-        trans_mat[i+1, i+2] = i_to_d
-        trans_mat[i+2, i] = d_to_m
-        trans_mat[i+2, i+1] = d_to_i
-        trans_mat[i+2, i+2] = d_to_d
+        states[i, 0].update_log_transition(0, m_to_m)
+        states[i, 0].update_log_transition(1, m_to_i)
+        states[i, 0].update_log_transition(2, m_to_d)
+        states[i, 1].update_log_transition(0, i_to_m)
+        states[i, 1].update_log_transition(1, i_to_i)
+        states[i, 1].update_log_transition(2, i_to_d)
+        states[i, 2].update_log_transition(0, d_to_m)
+        states[i, 2].update_log_transition(1, d_to_i)
+        states[i, 2].update_log_transition(2, d_to_d)
     # num =
 
 
