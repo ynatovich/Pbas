@@ -51,12 +51,19 @@ def build_states(motif_matrix, motif_s, motif_i, log_bg_e):
     """
     deletion_emition = {GAP: 0}
     states = [[HMMState(log_bg_e, BEGIN_STATE)]]
-    for i in range(len(motif_i)):
-        emi = Counter(motif_matrix[:, motif_i[i]:motif_i[i+1]])
-        emi.pop(GAP)
-        s = np.sum(emi.values())
-        emi = {x: np.log(emi[x]/s) for x in emi.keys()}
+    for i in range(len(motif_i)-1):
+        emi = Counter(np.ravel(motif_matrix[:, motif_i[i]:motif_i[i+1]]))
+        if GAP in emi.keys():
+            emi.pop(GAP)
+        ls = np.log(sum(emi.values()))
+        emi = {x: emi[x]-ls for x in emi.keys()}
         states.append([HMMState(emi, MOTIF_STATE), HMMState(emi, INSERTION_STATE), HMMState(deletion_emition, DELETION_STATE)])
+    emi = Counter(np.ravel(motif_matrix[:, motif_i[-1]::]))
+    if GAP in emi.keys():
+        emi.pop(GAP)
+    ls = np.log(sum(emi.values()))
+    emi = {x: emi[x]-ls for x in emi.keys()}
+    states.append([HMMState(emi, MOTIF_STATE), HMMState(emi, INSERTION_STATE), HMMState(deletion_emition, DELETION_STATE)])
     return states
 
 
@@ -122,9 +129,9 @@ def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
     :return: The HMMModel
     """
     motif_s = motif_matrix != GAP
-    motif_s = np.sum(motif_s, axis=1)
+    motif_s = np.sum(motif_s, axis=0)
     motif_s = motif_s > len(motif_matrix) / 2
-    motif_i = np.where(motif_s == 1)
+    motif_i = np.where(motif_s == 1)[0]
     states = build_states(motif_matrix, motif_s, motif_i, log_bg_e)
     build_transition(motif_matrix, motif_s, motif_i,log_bg_t, states)
     return HMM_Model(states)
@@ -136,7 +143,7 @@ def main():
     """
     Run HMM
     """
-    reader = rd.Reader("PF00096", "full" ,offline=True, motif=True,save_file=True)
+    reader = rd.Reader("PF00096", "full", offline=True, motif=True, save_file=True)
     motif_matrix = reader.get_fasta()
     log_bg_e = reader.get_bg_e()
     log_bg_t = reader.get_bg_t()
