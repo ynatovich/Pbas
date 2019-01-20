@@ -44,10 +44,10 @@ class HMM_Model:
 
 def build_states(motif_matrix, motif_s, motif_i, log_bg_e):
     """
-
-    :param motif_matrix:
-    :param motif_s:
-    :return:
+    Initialize the state and calculate their emissions
+    :param motif_matrix: matrix of all the motif
+    :param motif_s: vector of T or F. T in i if the position i is in the motif, F otherwise
+    :return: array of HMMState object represent states of the model
     """
     deletion_emition = {GAP: 0}
     states = [[HMMState(log_bg_e, BEGIN_STATE)]]
@@ -61,6 +61,14 @@ def build_states(motif_matrix, motif_s, motif_i, log_bg_e):
 
 
 def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
+    """
+    Update the transition of each state
+    :param motif_matrix: matrix of all the motif
+    :param motif_s: vector of T or F. T in i if the position i is in the motif, F otherwise
+    :param motif_i: vector represent the indexes of the motif
+    :param log_bg_t: the log transition to stay on background state
+    :param states: array of HMMState objects
+    """
     num_states = (len(states) - 2) * 3 + 2
     motif_gap_or_nuc = motif_matrix != GAP  # matrix with size like motif_mat represent if there is nuc or gap
     trans_mat = np.zeros((num_states, num_states), dtype=np.float64)
@@ -123,9 +131,10 @@ def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
 
 # -------------------- Main --------------------
 
+
 def main():
     """
-    Run 76558 ex2 part I
+    Run HMM
     """
     reader = rd.Reader("PF00096", "full")
     motif_matrix = reader.get_fasta()
