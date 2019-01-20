@@ -31,7 +31,7 @@ class Reader:
                 bro.get_current_form().print_summary()
                 bro['format'] = 'fasta'
                 bro['alnType'] = alnType.lower()
-                bro['case']= 'u'
+                bro['case'] = 'u'
                 bro['gaps'] = 'dots'
                 res = bro.submit_selected()
                 with open(self.fasta_name,'wb') as f:
@@ -44,7 +44,19 @@ class Reader:
                 c.write(f.read())
                 if not motif:
                     g.write(f.read())
+
+        bro.open("http://pfam.xfam.org/family/%s#tabview=tab6" % (pfam_id))
+        lnk = bro.get_current_page().text.replace("\n", "")
+        len_str = "Average length of the domain:"
+        cut = lnk[lnk.find(len_str)+len(len_str):]
+        avg_len = float(cut[:cut.find("aa")].strip())
+        cov_str = "Average coverage of the sequence by the domain:"
+        cut = cut[cut.find(cov_str)+len(cov_str):]
+        cov = float(cut[:cut.find('%')].strip())
         bg = self.fasta_read("background.fasta")
+        len_seqs = len(reduce((lambda x,y: x+y), bg))
+        approx_num_motif = len_seqs*cov/(avg_len*100)
+        self.bg_t = np.log(approx_num_motif / (len_seqs - approx_num_motif))
         bg = Counter(i for i in list(chain.from_iterable(bg)))
         s = sum(bg.values())
         self.background_e = {d: np.log(bg[d]/s) for d in bg.keys()}
@@ -78,6 +90,13 @@ class Reader:
 
     def get_bg_e(self):
         return self.background_e
+
+    def get_bg_t(self):
+        return self.bg_t
+
+    def create_matrix(self,fasta_file):
+        fast = self.fasta_read()
+        return np.array(list(map(list, fast)))
 
 r= Reader("PF00096", save_file=True, alnType='full')
 # d = r.get_fasta()
