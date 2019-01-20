@@ -1,6 +1,6 @@
 import numpy as np
 from collections import Counter
-import Reader
+import Pbas.Reader as rd
 
 # -------------------- Constants --------------------
 MAX_EM_ITERS = 100
@@ -47,7 +47,7 @@ class HMM_Model:
 # -------------------- Helper methods --------------------
 
 
-def build_states(motif_matrix, motif_s, motif_i, log_back_emi):
+def build_states(motif_matrix, motif_s, motif_i, log_bg_e):
     """
 
     :param motif_matrix:
@@ -55,22 +55,24 @@ def build_states(motif_matrix, motif_s, motif_i, log_back_emi):
     :return:
     """
     deletion_emition = {GAP: 0}
-    states = [[HMMState(log_back_emi, BEGIN_STATE)]]
+    states = [[HMMState(log_bg_e, BEGIN_STATE)]]
     for i in range(len(motif_i)):
         emi = Counter(motif_matrix[:, motif_i[i]:motif_i[i+1]])
         emi.pop(GAP)
         s = np.sum(emi.values())
         emi = {x: np.log(emi[x]/s) for x in emi.keys()}
         states.append([HMMState(emi, MOTIF_STATE), HMMState(emi, INSERTION_STATE), HMMState(deletion_emition, DELETION_STATE)])
-    states.append([HMMState(log_back_emi, END_STATE)])
+    states.append([HMMState(log_bg_e, END_STATE)])
     return states
 
 
-def build_transition(motif_matrix, motif_s, motif_i, states):
+def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
     num_states = (len(states) - 2) * 3 + 2
     motif_gap_or_nuc = motif_matrix != GAP  # matrix with size like motif_mat represent if there is nuc or gap
-    beg_state = states[0][0]
     trans_mat = np.zeros((num_states, num_states), dtype=np.float64)
+    trans_mat[0, 0] = log_bg_t
+    trans_mat[0, 1] = 1 - log_bg_t * sum(motif_matrix[:, 0] == GAP)
+    trans_mat[0, 3] = log_bg_t * sum(motif_matrix[:, 0] != GAP)
     s = motif_s.find(motif_s == 1)
     trans_mat[0, 1] = np.sum(motif_s[:, s], axis=1)
     for i in range(len(motif_i)):
@@ -101,10 +103,10 @@ def build_transition(motif_matrix, motif_s, motif_i, states):
         trans_mat[i+2, i] = d_to_m
         trans_mat[i+2, i+1] = d_to_i
         trans_mat[i+2, i+2] = d_to_d
-    num =
+    # num =
 
 
-def init_hmm_model(motif_matrix, log_back_emi):
+def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
     """
     Initialize a new HMMModel object in accordance with the
     requirements of 76558 ex2
@@ -116,9 +118,8 @@ def init_hmm_model(motif_matrix, log_back_emi):
     motif_s = np.sum(motif_s, axis=1)
     motif_s = motif_s > len(motif_matrix) / 2
     motif_i = np.where(motif_s == 1)
-    states = build_states(motif_matrix, motif_s, motif_i, log_back_emi)
-    transitions = build_transition(motif_matrix, motif_s, motif_i, states)
-
+    states = build_states(motif_matrix, motif_s, motif_i, log_bg_e)
+    transitions = build_transition(motif_matrix, motif_s, motif_i,log_bg_t, states)
 
 
     # emission_table
@@ -140,11 +141,12 @@ def main():
     """
     Run 76558 ex2 part I
     """
-    reader = Reader("PF00096", "full")
+    reader = rd.Reader("PF00096", "full")
     motif_matrix = reader.get_fasta()
-    log_back_emi = reader.get_bg_e()
-    motif_matrix =
-    model = init_hmm_model(motif_matrix, log_back_emi)
+    log_bg_e = reader.get_bg_e()
+    log_bg_t = reader.get_bg_t()
+    model = init_hmm_model(motif_matrix, log_bg_e, log_bg_t)
+
 
 if __name__ == '__main__':
     main()
