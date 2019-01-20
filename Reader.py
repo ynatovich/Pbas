@@ -13,39 +13,44 @@ from itertools import groupby
 
 class Reader:
 
-    def __init__(self, pfam_id, save_file=False, alnType='seed'):
+    def __init__(self, pfam_id, motif=True,save_file=False, alnType='seed'):
         """
-
-        :param pfam_id: pfam motif ID
+        param pfam_id: pfam motif ID
+        :param motif: selecting between motif or full seq
         :param save_file: boolean, whatever or not to save fasta file
         :param alnType: Alignment type
         """
         bro = mechanicalsoup.StatefulBrowser()
-        bro.open("http://pfam.xfam.org/family/%s#tabview=tab3"%(pfam_id))
-        bro.select_form('form[action=\"/family/alignment/download/format\"]')
-        bro['format']= 'fasta'
-        bro['alnType'] = alnType
-        res = bro.submit_selected()
-        self.fasta = res.content
-        self.fasta_name = "fasta%s.fasta"%pfam_id
-        if save_file:
+        self.fasta_name = "fasta%s.fasta" % pfam_id
+        if motif:
+            bro.open("http://pfam.xfam.org/family/%s#tabview=tab3"%(pfam_id))
+            bro.select_form('form[action=\"/family/alignment/download/format\"]')
+            bro['format'] = 'fasta'
+            bro['alnType'] = alnType.lower()
+            res = bro.submit_selected()
             with open(self.fasta_name,'wb') as f:
-                f.write(self.fasta)
-
-        # self.req = requests.get("https://pfam.xfam.org/family/%s/alignment/long/gzipped"%(pfam_id))
-        # with open("fasta%s.gz"%(pfam_id),'wb') as d:
-        #     d.write(self.req.content)
-        # with gzip.open("temp.gz", 'rb') as f:
-        #     self.fasta = f.read()
-        #     print(self.fasta)
-        # if not save_file:
-        #     os.remove("fasta%s.gz"%(pfam_id))
+                f.write(res.content)
+        else:
+            self.req = requests.get("https://pfam.xfam.org/family/%s/alignment/long/gzipped"%(pfam_id))
+            with open("%s.gz"%self.fasta_name,'wb') as d:
+                d.write(self.req.content)
+            with gzip.open("%s.gz"%self.fasta_name, 'rb') as f, open(self.fasta_name,'wb') as g:
+                g.write(f.read())
+            os.remove("%s.gz"%self.fasta_name)
+        self.fasta = self.fasta_read()
+        if not save_file:
+            os.remove(self.fasta_name)
 
 
     def get_fasta(self):
         return self.fasta
 
     def fasta_read(self, fasta_name=None):
+        """
+        Readsa fasta and return a dict of header: sequence
+        :param fasta_name: Name of the fasta file
+        :return: a dict of header: sequence
+        """
         if not fasta_name:
             fasta_name = self.fasta_name
         f = open(fasta_name)
@@ -56,6 +61,3 @@ class Reader:
             seq = "".join(s.strip() for s in next(faiter))
             fas_d[header] = seq
         return fas_d
-
-
-
