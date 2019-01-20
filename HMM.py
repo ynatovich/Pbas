@@ -136,7 +136,7 @@ def main():
     """
     Run HMM
     """
-    reader = rd.Reader("PF00096", "full")
+    reader = rd.Reader("PF00096", "full" ,offline=True, motif=True,save_file=True)
     motif_matrix = reader.get_fasta()
     log_bg_e = reader.get_bg_e()
     log_bg_t = reader.get_bg_t()
