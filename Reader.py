@@ -28,7 +28,6 @@ class Reader:
             if motif:
                 bro.open("http://pfam.xfam.org/family/%s#tabview=tab3"%(pfam_id))
                 bro.select_form('form[action=\"/family/alignment/download/format\"]')
-                bro.get_current_form().print_summary()
                 bro['format'] = 'fasta'
                 bro['alnType'] = alnType.lower()
                 bro['case'] = 'u'
@@ -36,15 +35,18 @@ class Reader:
                 res = bro.submit_selected()
                 with open(self.fasta_name,'wb') as f:
                     f.write(res.content)
-            self.req = requests.get("https://pfam.xfam.org/family/%s/alignment/long/gzipped"%(pfam_id))
-            with open("%s.gz"%self.fasta_name,'wb') as d:
-                d.write(self.req.content)
-            with gzip.open("%s.gz"%self.fasta_name, 'rb') as f, open(self.fasta_name,'wb') as g, open("background.fasta"
-                                                                                                      , 'wb') as c:
-                c.write(f.read())
+            print("yo fam")
+            req = requests.get("https://pfam.xfam.org/family/%s/alignment/long/gzipped"%(pfam_id))
+            print("waddap")
+            with open("%s.gz" % self.fasta_name, 'wb') as d:
+                d.write(req.content)
+            with gzip.open("%s.gz" % self.fasta_name, 'rb') as f, open(self.fasta_name, 'wb') as g, open(
+                    "background.fasta",
+                    'wb') as c:
+                data = f.read()
+                c.write(data)
                 if not motif:
-                    g.write(f.read())
-
+                    g.write(data)
         bro.open("http://pfam.xfam.org/family/%s#tabview=tab6" % (pfam_id))
         lnk = bro.get_current_page().text.replace("\n", "")
         len_str = "Average length of the domain:"
@@ -56,14 +58,14 @@ class Reader:
         bg = self.fasta_read("background.fasta")
         len_seqs = len(reduce((lambda x,y: x+y), bg))
         approx_num_motif = len_seqs*cov/(avg_len*100)
-        self.bg_t = np.log(approx_num_motif / (len_seqs - approx_num_motif))
+        self.bg_t = np.log(1 - (approx_num_motif / (len_seqs - approx_num_motif)))
         bg = Counter(i for i in list(chain.from_iterable(bg)))
         s = sum(bg.values())
         self.background_e = {d: np.log(bg[d]/s) for d in bg.keys()}
         # os.remove("background.fasta")  ## uncomment if you want to clear temp files
-        # os.remove("%s.gz"%self.fasta_name)
+        os.remove("%s.gz"%self.fasta_name)
         fast = self.fasta_read()
-        self.fasta = np.array(list(map(list, fast)))
+        self.fasta = np.array(map(np.array, fast))
         if not save_file:
             os.remove(self.fasta_name)
 
@@ -95,10 +97,10 @@ class Reader:
         return self.bg_t
 
     def create_matrix(self,fasta_file):
-        fast = self.fasta_read()
-        return np.array(list(map(list, fast)))
+        fast = self.fasta_read(fasta_file)
+        return np.array((map(np.array, fast)))
 
-r= Reader("PF00096", save_file=True, alnType='full')
+r= Reader("PF00096",offline=False, save_file=True, alnType='full')
 # d = r.get_fasta()
 # print(r.background_e)
 
