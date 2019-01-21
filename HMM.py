@@ -35,10 +35,13 @@ class HMMState:
     def update_log_transition(self, other, new_log_prob):
         self.log_transition_probabilities[other] = new_log_prob
 
+    def check_prob(self):
+        print(logsumexp(self.log_transition_probabilities))
+
 class HMM_Model:
     def __init__(self, states):
         self.states = states
-        self.start_state = self.states[0, 0]
+        self.start_state = self.states[0][0]
 
 # -------------------- Helper methods --------------------
 
@@ -121,7 +124,8 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
         states[i][2].update_log_transition(1, d_to_i)
         states[i][2].update_log_transition(2, d_to_d)
         # test
-
+        # for j in range(3):
+        #     states[i][j].check_prob()
 
 
 def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
