@@ -18,6 +18,7 @@ class Reader:
     def __init__(self, pfam_id,alnType='seed' ,offline=True, motif=True,save_file=False):
         """
         :param pfam_id: pfam motif ID
+        :param offline: determines offline state
         :param motif: selecting between motif or full seq
         :param save_file: boolean, whatever or not to save fasta file
         :param alnType: Alignment type
@@ -35,15 +36,11 @@ class Reader:
                 res = bro.submit_selected()
                 with open(self.fasta_name,'wb') as f:
                     f.write(res.content)
-            print("yo fam")
             req = requests.get("https://pfam.xfam.org/family/%s/alignment/long/gzipped"%(pfam_id))
-            print("waddap")
-
             with open("%s.gz" % self.fasta_name, 'wb') as d:
                 d.write(req.content)
             with gzip.open("%s.gz" % self.fasta_name, 'rb') as f, open(self.fasta_name, 'wb') as g, open(
-                    "background.fasta",
-                    'wb') as c:
+                    "background.fasta",'wb') as c:
                 data = f.read()
                 c.write(data)
                 if not motif:
@@ -64,7 +61,8 @@ class Reader:
         s = sum(bg.values())
         self.background_e = {d: np.log(bg[d]/s) for d in bg.keys()}
         # os.remove("background.fasta")  ## uncomment if you want to clear temp files
-        os.remove("%s.gz"%self.fasta_name)
+        if not offline:
+            os.remove("%s.gz"%self.fasta_name)
         fast = self.fasta_read()
         self.fasta = np.array(map(list, fast))
         if not save_file:
@@ -72,6 +70,9 @@ class Reader:
 
 
     def get_fasta(self):
+        """
+        :return: the fasta file
+        """
         return self.fasta
 
     def fasta_read(self, fasta_name=None):
@@ -92,12 +93,23 @@ class Reader:
         return fas_d
 
     def get_bg_e(self):
+        """
+        :return: return background state emissions
+        """
         return self.background_e
 
     def get_bg_t(self):
+        """
+        :return: background transition probability
+        """
         return self.bg_t
 
     def create_matrix(self,fasta_file):
+        """
+        Create a 2d matrix from aligned fasta file
+        :param fasta_file: aligned fasta file
+        :return: 2d np array of lists of chars
+        """
         fast = self.fasta_read(fasta_file)
         return np.array((map(list, fast)))
 
