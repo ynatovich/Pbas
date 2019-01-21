@@ -83,8 +83,8 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
     states[0][0].update_log_transition(0,  np.log(1 - np.exp(log_bg_t)) + np.log(sum(motif_matrix[:, motif_i[0]] != GAP)))
     states[0][0].update_log_transition(2, np.log(1 - np.exp(log_bg_t)) + np.log(sum(motif_matrix[:, motif_i[0]] == GAP)))
     for i in range(len(motif_i)):
-        init_pro = np.log(1/(motif_matrix.shape[0]+3))
-        in_m, in_i, in_d = 3, 3, 3
+        init_pro = 0  # log(1)
+        count_m, count_i, count_d = 3, 3, 3
         m_to_m, m_to_i, m_to_d = init_pro, init_pro, init_pro
         i_to_i, i_to_d, i_to_m = init_pro, init_pro, init_pro
         d_to_i, d_to_d, d_to_m = init_pro, init_pro, init_pro
@@ -97,45 +97,43 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
             temp_mat = motif_matrix[:, motif_i[i]+1:next_i]
             temp_mat = temp_mat[np.sum(temp_mat != GAP, axis=1) > 1, :]
             m_to_i = np.log((np.sum(con1&ncon2)+1))
-            i_to_i = np.log((np.sum(temp_mat != GAP) - len(temp_mat)+1)/
-                            (motif_matrix.shape[0]*(next_i - motif_i[i] - 1)+3))
+            i_to_i = np.log((np.sum(temp_mat != GAP) - len(temp_mat) + 1))
             d_to_i = np.log((np.sum(~con1&con2)+1))
-            in_m += np.sum(con1&ncon2)
-            in_i += np.sum(temp_mat != GAP) - len(temp_mat)
-            in_d += np.sum(~con1&con2)
+            count_m += np.sum(con1&ncon2)
+            count_i += np.sum(temp_mat != GAP) - len(temp_mat)
+            count_d += np.sum(~con1&con2)
             if i != len(motif_i) - 1:
                 i_to_d = np.log((np.sum(ncon2&~con3)+1))
                 i_to_m = np.log((np.sum(ncon2&con3)+1))
-                in_i += np.sum(ncon2&~con3)
-                in_i += np.sum(ncon2&con3)
+                count_i += np.sum(ncon2&~con3) + np.sum(ncon2&con3)
         if i != len(motif_i) - 1:
             m_to_m = np.log((np.sum(con1&con2&con3)+1))
             m_to_d = np.log((np.sum(con1&con2&~con3)+1))
-            in_m += np.sum(con1&con2&con3) + np.sum(con1&con2&~con3)
+            count_m += np.sum(con1&con2&con3) + np.sum(con1&con2&~con3)
             d_to_d = np.log((np.sum(~con1&con2&~con3)+1))
             d_to_m = np.log((np.sum(~con1&con2&con3)+1))
-            in_d += np.sum(~con1&con2&~con3) + np.sum(~con1&con2&con3)
+            count_d += np.sum(~con1&con2&~con3) + np.sum(~con1&con2&con3)
         else:  # we got to the last position in the motif
-            states[i+1][0].update_log_transition(3, np.log(1 - np.exp(m_to_i)))
-            states[i+1][1].update_log_transition(3, np.log(1 - np.exp(i_to_i)))
-            states[i+1][2].update_log_transition(3, np.log(1 - np.exp(d_to_i)))
-        states[i+1][0].update_log_transition(0, m_to_m - np.log(in_m))
-        states[i+1][0].update_log_transition(1, m_to_i - np.log(in_m))
-        states[i+1][0].update_log_transition(2, m_to_d - np.log(in_m))
-        states[i+1][1].update_log_transition(0, i_to_m - np.log(in_m))
-        states[i+1][1].update_log_transition(1, i_to_i - np.log(in_i))
-        states[i+1][1].update_log_transition(2, i_to_d - np.log(in_i))
-        states[i+1][2].update_log_transition(0, d_to_m - np.log(in_d))
-        states[i+1][2].update_log_transition(1, d_to_i - np.log(in_d))
-        states[i+1][2].update_log_transition(2, d_to_d - np.log(in_d))
+            states[-1][0].update_log_transition(3, np.log(1 - np.exp(m_to_i)))
+            states[-1][1].update_log_transition(3, np.log(1 - np.exp(i_to_i)))
+            states[-1][2].update_log_transition(3, np.log(1 - np.exp(d_to_i)))
+        states[i+1][0].update_log_transition(0, m_to_m - np.log(count_m))
+        states[i+1][0].update_log_transition(1, m_to_i - np.log(count_m))
+        states[i+1][0].update_log_transition(2, m_to_d - np.log(count_m))
+        states[i+1][1].update_log_transition(0, i_to_m - np.log(count_i))
+        states[i+1][1].update_log_transition(1, i_to_i - np.log(count_i))
+        states[i+1][1].update_log_transition(2, i_to_d - np.log(count_i))
+        states[i+1][2].update_log_transition(0, d_to_m - np.log(count_d))
+        states[i+1][2].update_log_transition(1, d_to_i - np.log(count_d))
+        states[i+1][2].update_log_transition(2, d_to_d - np.log(count_d))
         # test
-        for j in range(3):
-            if j == 0:
-                print("i:", i, "motiv_i:", motif_i[i])
-                if i != len(motif_i) - 1:
-                    print("i+1:", i, "motiv_i+1:", motif_i[i+1])
-            print("state: ", j)
-            states[i+1][j].check_prob()
+        # for j in range(3):
+        #     if j == 0:
+        #         print("i:", i, "motiv_i:", motif_i[i])
+        #         if i != len(motif_i) - 1:
+        #             print("i+1:", i, "motiv_i+1:", motif_i[i+1])
+        #     print("state: ", j)
+        #     states[i+1][j].check_prob()
 
 
 def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
