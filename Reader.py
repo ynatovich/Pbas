@@ -64,7 +64,7 @@ class Reader:
         if not offline:
             os.remove("%s.gz"%self.fasta_name)
         fast = self.fasta_read()
-        self.fasta = np.array(map(list, fast))
+        self.fasta = np.array(list(map(list, fast)))
         if not save_file:
             os.remove(self.fasta_name)
 
@@ -111,7 +111,7 @@ class Reader:
         :return: 2d np array of lists of chars
         """
         fast = self.fasta_read(fasta_file)
-        return np.array((map(list, fast)))
+        return np.array(list(map(list, fast)))
 
 # r= Reader("PF00071",offline=False, save_file=True, alnType='full')
 # d = r.get_fasta()
