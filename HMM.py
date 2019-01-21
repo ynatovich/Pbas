@@ -1,6 +1,7 @@
 import numpy as np
 from collections import Counter
 import Pbas.Reader as rd
+from scipy.misc import logsumexp
 
 # -------------------- Constants --------------------
 MAX_EM_ITERS = 100
@@ -84,22 +85,26 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
         m_to_m, m_to_i, m_to_d = init_pro, init_pro, init_pro
         i_to_i, i_to_d, i_to_m = init_pro, init_pro, init_pro
         d_to_i, d_to_d, d_to_m = init_pro, init_pro, init_pro
+        next_i = -1 if i == len(motif_i) - 1 else motif_i[i+1]
         con1 = motif_matrix[:, motif_i[i]] != GAP
-        con2 = motif_matrix[:, motif_i[i]+1:motif_i[i+1]] == GAP if motif_i[i]+1 != motif_i[i+1] else np.array([True]*len(con1))
-        con3 = motif_matrix[:, motif_i[i+1]] != GAP
-        if i != len(motif_i) - 1 and motif_i[i]+1 != motif_i[i+1]:
+        con2 = np.array([True]*len(con1))
+        ncon2 = np.array([False]*len(con1))
+        con3 = motif_matrix[:, next_i] != GAP
+        if motif_i[i]+1 != next_i:
+            temp_mat = motif_matrix[:, motif_i[i]+1:next_i]
+            temp_mat = temp_mat[np.sum(temp_mat != GAP, axis=1) > 1, :]
+            m_to_i = np.log((np.sum(con1&ncon2)+1)/(motif_matrix.shape[0]+3))
+            i_to_i = np.log((np.sum(temp_mat != GAP) - len(temp_mat))/
+                            (motif_matrix.shape[0]*(next_i - motif_i[i] - 1)+3))
+            d_to_i = np.log((np.sum(~con1&con2)+1)/(motif_matrix.shape[0]+3))
+            if i != len(motif_i) - 1:
+                i_to_d = np.log((np.sum(ncon2&~con3)+1)/(motif_matrix.shape[0]+3))
+                i_to_m = np.log((np.sum(ncon2&con3)+1)/(motif_matrix.shape[0]+3))
+        if i != len(motif_i) - 1:
+            con2 = np.all(motif_matrix[:, motif_i[i]+1:next_i] == GAP, axis=1) if motif_i[i]+1 != next_i else con2
+            # ncon2 = np.any(motif_matrix[:, motif_i[i]+1:next_i] != GAP, axis=1) if motif_i[i]+1 != next_i else ncon2
             m_to_m = np.log((np.sum(con1&con2&con3)+1)/(motif_matrix.shape[0]+3))
             m_to_d = np.log((np.sum(con1&con2&~con3)+1)/(motif_matrix.shape[0]+3))
-        if motif_i[i]+1 != motif_i[i+1]:
-            temp_mat = motif_matrix[motif_i[i]+1:motif_i[i+1]]
-            temp_mat = temp_mat[np.sum(temp_mat != GAP, 0) > 1, :]
-            m_to_i = np.log((np.sum(con1&~con2)+1)/(motif_matrix.shape[0]+3))
-            i_to_i = np.log((np.sum(temp_mat != GAP) - len(temp_mat))/
-                            (motif_matrix.shape[0]*(motif_i[i+1] - motif_i[i] - 1)+3))
-            i_to_d = np.log((np.sum(~con2&~con3)+1)/(motif_matrix.shape[0]+3))
-            i_to_m = np.log((np.sum(~con2&con3)+1)/(motif_matrix.shape[0]+3))
-            d_to_i = np.log((np.sum(~con1&con2)+1)/(motif_matrix.shape[0]+3))
-        if i != len(motif_i) - 1:
             d_to_d = np.log((np.sum(~con1&con2&~con3)+1)/(motif_matrix.shape[0]+3))
             d_to_m = np.log((np.sum(~con1&con2&con3)+1)/(motif_matrix.shape[0]+3))
         else:  # we got to the last position in the motif
@@ -115,6 +120,8 @@ def build_transition(motif_matrix, motif_s, motif_i, log_bg_t, states):
         states[i][2].update_log_transition(0, d_to_m)
         states[i][2].update_log_transition(1, d_to_i)
         states[i][2].update_log_transition(2, d_to_d)
+        # test
+
 
 
 def init_hmm_model(motif_matrix, log_bg_e, log_bg_t):
